@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEngine;
-using KModkit;
 
 public class GoingBackwardsScript : MonoBehaviour {
 
@@ -25,7 +23,7 @@ public class GoingBackwardsScript : MonoBehaviour {
 	//Logging
     static int moduleIdCounter = 1;
     int moduleId;
-    private bool ModuleSolved;
+    private bool moduleSolved;
 	
 	void Awake()
 	{
@@ -45,8 +43,8 @@ public class GoingBackwardsScript : MonoBehaviour {
 	void CenterPress()
 	{
 		CenterButton.AddInteractionPunch(.2f);
-		Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.BigButtonPress, transform);
-		if (!ModuleSolved)
+		Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.BigButtonPress, CenterButton.transform);
+		if (!moduleSolved)
 		{
 			if (CenterText.text == "?")
 			{
@@ -88,8 +86,8 @@ public class GoingBackwardsScript : MonoBehaviour {
 	void PressNumber(int Placement)
 	{
 		NumberButtons[Placement].AddInteractionPunch(.2f);
-		Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.BigButtonPress, transform);
-		if (!ModuleSolved)
+		Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.BigButtonPress, NumberButtons[Placement].transform);
+		if (!moduleSolved)
 		{
 			if (GoingDown && !Animating)
 			{
@@ -170,7 +168,7 @@ public class GoingBackwardsScript : MonoBehaviour {
 		CenterText.color = Color.white;
 		CenterText.text = "!";
 		Timer.text = "GG";
-		ModuleSolved = true;
+		moduleSolved = true;
 		Audio.PlaySoundAtTransform(SFX[0].name, transform);
 	}
 	
@@ -271,6 +269,61 @@ public class GoingBackwardsScript : MonoBehaviour {
 			yield return "strike";
 			yield return "solve";
 			CenterButton.OnInteract();
+		}
+	}
+
+	IEnumerator TwitchHandleForcedSolve()
+    {
+		if (Animating && (CenterText.color == Color.red))
+        {
+			StopAllCoroutines();
+			Module.HandlePass();
+			CenterText.color = Color.white;
+			CenterText.text = "!";
+			Timer.color = Color.white;
+			Timer.text = "GG";
+			moduleSolved = true;
+			Audio.PlaySoundAtTransform(SFX[0].name, transform);
+			yield break;
+        }
+		else if (Animating && (CenterText.color == Color.green))
+        {
+			while (!moduleSolved) yield return true;
+			yield break;
+        }
+		else
+		{
+			if (!GoingDown && !Animating)
+				CenterButton.OnInteract();
+			while (Animating) yield return null;
+			string ans = ReverseString(GeneratedNumber);
+			for (int i = 0; i < SubmittedNumber.Length; i++)
+            {
+				if (SubmittedNumber[i] != ans[i])
+                {
+					StopAllCoroutines();
+					Module.HandlePass();
+					CenterText.color = Color.white;
+					CenterText.text = "!";
+					Timer.color = Color.white;
+					Timer.text = "GG";
+					moduleSolved = true;
+					Audio.PlaySoundAtTransform(SFX[0].name, transform);
+					yield break;
+				}
+            }
+			int start = SubmittedNumber.Length;
+			for (int x = start; x < 10; x++)
+			{
+				NumberButtons[Int32.Parse(ans[x].ToString())].OnInteract();
+				yield return new WaitForSecondsRealtime(0.1f);
+			}
+			int rando = UnityEngine.Random.Range(0, 11);
+			if (rando == 10)
+				CenterButton.OnInteract();
+			else
+				NumberButtons[rando].OnInteract();
+			while (!moduleSolved) yield return true;
 		}
 	}
 }
